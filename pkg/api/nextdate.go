@@ -24,13 +24,13 @@ func nextDayHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	nowTime, err := time.Parse(layout, now)
 	if err != nil {
-		http.Error(res, fmt.Sprintf("can't parse <now> parameter: %v", err), http.StatusBadRequest)
+		http.Error(res, fmt.Sprintf("can't parse <now> parameter: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	next, err := NextDate(nowTime, date, repeat)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")

@@ -15,7 +15,7 @@ var schema string = `CREATE TABLE scheduler (
     repeat VARCHAR(128) NOT NULL DEFAULT ""
 );
 CREATE INDEX scheduler_date ON scheduler (date);`
-var db *sql.DB
+var Db *sql.DB
 
 func Init(dbpath string) error {
 	_, err := os.Stat(dbpath)
@@ -23,14 +23,13 @@ func Init(dbpath string) error {
 	if err != nil {
 		install = true
 	}
-	db, err = sql.Open("sqlite", dbpath)
+	Db, err = sql.Open("sqlite", dbpath)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	if install {
-		_, err = db.Exec(schema)
+		_, err = Db.Exec(schema)
 		if err != nil {
 			return err
 		}

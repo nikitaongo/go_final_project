@@ -15,6 +15,7 @@ func main() {
 		dbFile = "scheduler.db"
 	}
 	db.Init(dbFile)
+	defer db.Db.Close()
 
 	webDir := "./web"
 	port := os.Getenv("TODO_PORT")
