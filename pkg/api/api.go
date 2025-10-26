@@ -22,13 +22,17 @@ func taskHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func writeJson(res http.ResponseWriter, data any) {
+func writeJson(res http.ResponseWriter, status int, data any) {
 	resp, err := json.Marshal(data)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	res.WriteHeader(http.StatusOK)
+	res.WriteHeader(status)
 	res.Write(resp)
+}
+
+func errJson(res http.ResponseWriter, status int, msg string) {
+	writeJson(res, status, map[string]string{"error": msg})
 }

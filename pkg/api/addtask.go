@@ -13,20 +13,21 @@ import (
 func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 	var task db.Task
 	var buf bytes.Buffer
+	var response any
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		errJson(res, http.StatusInternalServerError, "can't read bytes from body")
 		return
 	}
 
 	err = json.Unmarshal(buf.Bytes(), &task)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
+		errJson(res, http.StatusInternalServerError, "can't unmarshal request")
 		return
 	}
 	//check logic - does spaces at title field is valid?
 	if strings.TrimSpace(task.Title) == "" {
-		http.Error(res, "missing required field: task", http.StatusBadRequest)
+		errJson(res, http.StatusInternalServerError, "task title can't be empty")
 		return
 	}
 
@@ -36,7 +37,7 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 
 	parsedDate, err := time.Parse(layout, task.Date)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
+		errJson(res, http.StatusInternalServerError, "task date parsing failed")
 		return
 	}
 
@@ -46,19 +47,20 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 		} else {
 			task.Date, err = NextDate(time.Now(), parsedDate.Format(layout), task.Repeat)
 			if err != nil {
-				http.Error(res, err.Error(), http.StatusInternalServerError)
+				errJson(res, http.StatusInternalServerError, "wrong task repeat pattern")
 				return
 			}
 		}
 	}
-	fmt.Println(task)
 	id, err := db.AddTask(&task)
+	response = map[string]any{"id": id}
+
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJson(res, id)
+	writeJson(res, http.StatusCreated, response)
 }
 func getTaskHandler(res http.ResponseWriter, req *http.Request) {
 	id := req.FormValue("id")

@@ -72,11 +72,14 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		if shift > maxDays || shift < 0 {
 			return "", fmt.Errorf("can't shift date - wrong input (%d) days", shift)
 		}
+		if shift == 1 {
+			return now.Format(layout), nil
+		}
 		for {
-			nextTime = nextTime.AddDate(0, 0, shift)
 			if nextTime.After(now) {
 				break
 			}
+			nextTime = nextTime.AddDate(0, 0, shift)
 		}
 
 	case "y":
@@ -88,6 +91,9 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		}
 
 	case "w":
+		if len(repeatData) == 1 {
+			return "", fmt.Errorf("can't shift date - no w's parameters on input")
+		}
 		days := strings.Split(repeatData[1], ",")
 		weekDays := make(map[int]bool, len(days))
 		for _, d := range days {
