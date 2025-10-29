@@ -72,20 +72,17 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		if shift > maxDays || shift < 0 {
 			return "", fmt.Errorf("can't shift date - wrong input (%d) days", shift)
 		}
-		if shift == 1 {
-			return now.Format(layout), nil
-		}
 		for {
-			if nextTime.After(now) {
+			nextTime = nextTime.AddDate(0, 0, shift)
+			if nextTime.After(now) || nextTime.Equal(now) {
 				break
 			}
-			nextTime = nextTime.AddDate(0, 0, shift)
 		}
 
 	case "y":
 		for {
 			nextTime = nextTime.AddDate(1, 0, 0)
-			if nextTime.After(now) {
+			if nextTime.After(now) || nextTime.Equal(now) {
 				break
 			}
 		}
@@ -147,7 +144,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			if len(repeatData) == 2 {
 				for {
 					nextTime = nextTime.AddDate(0, 0, 1)
-					if days[int(nextTime.Day())] && nextTime.After(now) {
+					if days[int(nextTime.Day())] && (nextTime.After(now) || nextTime.Equal(now)) {
 						break
 					}
 				}
@@ -171,7 +168,9 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
 				for {
 					nextTime = nextTime.AddDate(0, 0, 1)
-					if monthes[int(nextTime.Month())] && days[int(nextTime.Day())] && nextTime.After(now) {
+					if monthes[int(nextTime.Month())] &&
+						days[int(nextTime.Day())] &&
+						(nextTime.After(now) || nextTime.Equal(now)) {
 						break
 					}
 				}
