@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"gofinalproject/pkg/db"
 	"net/http"
 	"strings"
@@ -61,29 +60,4 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJson(res, http.StatusCreated, response)
-}
-func getTaskHandler(res http.ResponseWriter, req *http.Request) {
-	id := req.FormValue("id")
-
-	if id == "" {
-		http.Error(res, fmt.Sprintf("wrong id: %q", id), http.StatusBadRequest)
-		return
-	}
-
-	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	res.WriteHeader(http.StatusOK)
-	res.Write([]byte("getTaskHandler() is under construction"))
-}
-
-func deleteTaskHandler(res http.ResponseWriter, req *http.Request) {
-	id := req.FormValue("id")
-
-	if id == "" {
-		http.Error(res, fmt.Sprintf("wrong id: %q", id), http.StatusBadRequest)
-		return
-	}
-
-	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	res.WriteHeader(http.StatusOK)
-	res.Write([]byte("deleteTaskHandler() is under construction"))
 }

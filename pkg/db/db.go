@@ -17,6 +17,8 @@ var schema string = `CREATE TABLE scheduler (
 CREATE INDEX scheduler_date ON scheduler (date);`
 var Db *sql.DB
 
+var MaxTasks = 50
+
 func Init(dbpath string) error {
 	_, err := os.Stat(dbpath)
 	var install bool
