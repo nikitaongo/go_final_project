@@ -44,6 +44,19 @@ func daysIn(month, year int) int {
 	return t.Day()
 }
 
+// sameDay returns true if date1 is same or after date2
+func isSameOrAfter(date1, date2 time.Time) bool {
+	y1, m1, d1 := date1.Date()
+	y2, m2, d2 := date2.Date()
+	if y1 != y2 {
+		return y1 > y2
+	}
+	if m1 != m2 {
+		return m1 > m2
+	}
+	return d1 >= d2
+}
+
 // NextDate calculates next date with repeat pattern, now and start dates
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	nextTime, err := time.Parse(layout, dstart)
@@ -73,16 +86,17 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			return "", fmt.Errorf("can't shift date - wrong input (%d) days", shift)
 		}
 		for {
-			nextTime = nextTime.AddDate(0, 0, shift)
-			if nextTime.After(now) || nextTime.Equal(now) {
+
+			if isSameOrAfter(nextTime, now) {
 				break
 			}
+			nextTime = nextTime.AddDate(0, 0, shift)
 		}
 
 	case "y":
 		for {
 			nextTime = nextTime.AddDate(1, 0, 0)
-			if nextTime.After(now) || nextTime.Equal(now) {
+			if isSameOrAfter(nextTime, now) {
 				break
 			}
 		}
@@ -107,10 +121,10 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			weekDays[dayNum] = true
 		}
 		for {
-			nextTime = nextTime.AddDate(0, 0, 1)
-			if weekDays[int(nextTime.Weekday())] && nextTime.After(now) {
+			if weekDays[int(nextTime.Weekday())] && isSameOrAfter(nextTime, now) {
 				break
 			}
+			nextTime = nextTime.AddDate(0, 0, 1)
 		}
 
 	case "m":
@@ -143,10 +157,10 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
 			if len(repeatData) == 2 {
 				for {
-					nextTime = nextTime.AddDate(0, 0, 1)
-					if days[int(nextTime.Day())] && (nextTime.After(now) || nextTime.Equal(now)) {
+					if days[int(nextTime.Day())] && isSameOrAfter(nextTime, now) {
 						break
 					}
+					nextTime = nextTime.AddDate(0, 0, 1)
 				}
 				return nextTime.Format(layout), nil
 			}
@@ -170,7 +184,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 					nextTime = nextTime.AddDate(0, 0, 1)
 					if monthes[int(nextTime.Month())] &&
 						days[int(nextTime.Day())] &&
-						(nextTime.After(now) || nextTime.Equal(now)) {
+						isSameOrAfter(nextTime, now) {
 						break
 					}
 				}
