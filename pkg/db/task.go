@@ -23,7 +23,7 @@ func AddTask(task *Task) (int64, error) {
 	if err == nil {
 		id, err = res.LastInsertId()
 	} else {
-		return 0, fmt.Errorf("addtask query error: %w", err)
+		return 0, fmt.Errorf("addtask exec error: %w", err)
 	}
 
 	return id, err
@@ -38,15 +38,30 @@ func GetTask(id string) (*Task, error) {
 	}
 	return &task, nil
 }
+
+func DeleteTask(id string) error {
+	query := `DELETE FROM scheduler WHERE id = $1`
+	res, err := Db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("deletetask exec error: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("deletetask rowsaffected error: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("no rows deleted: %w \nid: %s", err, id)
+	}
+	return nil
+}
+
 func UpdateTask(task *Task) error {
-	// параметры пропущены, не забудьте указать WHERE
 	query := `UPDATE scheduler SET date = $2, title = $3, comment = $4, repeat = $5 WHERE id = $1`
 	res, err := Db.Exec(query, task.ID, task.Date, task.Title, task.Comment, task.Repeat)
 	if err != nil {
 		return err
 	}
-	// метод RowsAffected() возвращает количество записей к которым
-	// был применена SQL команда
 	count, err := res.RowsAffected()
 	if err != nil {
 		return err
@@ -56,6 +71,23 @@ func UpdateTask(task *Task) error {
 	}
 	return nil
 }
+
+func UpdateDate(task *Task) error {
+	query := `UPDATE scheduler SET date = $2 WHERE id = $1`
+	res, err := Db.Exec(query, task.ID, task.Date)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf(`incorrect id for updating task date`)
+	}
+	return nil
+}
+
 func Tasks(limit int) ([]*Task, error) {
 	tasks := make([]*Task, 0, limit)
 	query := `SELECT * FROM scheduler ORDER BY date DESC LIMIT $1`

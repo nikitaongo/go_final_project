@@ -40,7 +40,7 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, isNew bool) {
 		errJson(res, http.StatusInternalServerError, "task date parsing failed")
 		return
 	}
-	if isSameOrAfter(time.Now(), parsedDate) {
+	if isAfter(time.Now(), parsedDate) {
 		//if parsedDate.Before(time.Now()) {
 		if strings.TrimSpace(task.Repeat) == "" {
 			task.Date = time.Now().Format(layout)

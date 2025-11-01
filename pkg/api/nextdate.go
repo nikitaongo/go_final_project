@@ -45,7 +45,7 @@ func daysIn(month, year int) int {
 }
 
 // sameDay returns true if date1 is same or after date2
-func isSameOrAfter(date1, date2 time.Time) bool {
+func isAfter(date1, date2 time.Time) bool {
 	y1, m1, d1 := date1.Date()
 	y2, m2, d2 := date2.Date()
 	if y1 != y2 {
@@ -54,7 +54,7 @@ func isSameOrAfter(date1, date2 time.Time) bool {
 	if m1 != m2 {
 		return m1 > m2
 	}
-	return d1 >= d2
+	return d1 > d2
 }
 
 // NextDate calculates next date with repeat pattern, now and start dates
@@ -86,17 +86,17 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			return "", fmt.Errorf("can't shift date - wrong input (%d) days", shift)
 		}
 		for {
-
-			if isSameOrAfter(nextTime, now) {
+			//wrong logic - now: 20240126 dstart: 20240202 repeat: d 30; nextTime: 20240303?
+			nextTime = nextTime.AddDate(0, 0, shift)
+			if isAfter(nextTime, now) {
 				break
 			}
-			nextTime = nextTime.AddDate(0, 0, shift)
 		}
 
 	case "y":
 		for {
 			nextTime = nextTime.AddDate(1, 0, 0)
-			if isSameOrAfter(nextTime, now) {
+			if isAfter(nextTime, now) {
 				break
 			}
 		}
@@ -121,7 +121,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			weekDays[dayNum] = true
 		}
 		for {
-			if weekDays[int(nextTime.Weekday())] && isSameOrAfter(nextTime, now) {
+			if weekDays[int(nextTime.Weekday())] && isAfter(nextTime, now) {
 				break
 			}
 			nextTime = nextTime.AddDate(0, 0, 1)
@@ -157,7 +157,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
 			if len(repeatData) == 2 {
 				for {
-					if days[int(nextTime.Day())] && isSameOrAfter(nextTime, now) {
+					if days[int(nextTime.Day())] && isAfter(nextTime, now) {
 						break
 					}
 					nextTime = nextTime.AddDate(0, 0, 1)
@@ -184,7 +184,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 					nextTime = nextTime.AddDate(0, 0, 1)
 					if monthes[int(nextTime.Month())] &&
 						days[int(nextTime.Day())] &&
-						isSameOrAfter(nextTime, now) {
+						isAfter(nextTime, now) {
 						break
 					}
 				}
