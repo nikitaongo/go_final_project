@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"gofinalproject/pkg/db"
 	"net/http"
 )
 
@@ -15,8 +17,33 @@ func Init() {
 func taskHandler(res http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case http.MethodPost:
-		addTaskHandler(res, req)
+		createTaskHandler(res, req)
+	case http.MethodGet:
+		getTaskHandler(res, req)
+	case http.MethodPut:
+		editTaskHandler(res, req)
 	}
+}
+
+func createTaskHandler(res http.ResponseWriter, req *http.Request) {
+	isNew := true
+	addTaskHandler(res, req, isNew)
+}
+
+func editTaskHandler(res http.ResponseWriter, req *http.Request) {
+	isNew := false
+	addTaskHandler(res, req, isNew)
+}
+
+func getTaskHandler(res http.ResponseWriter, req *http.Request) {
+	id := req.FormValue("id")
+	task, err := db.GetTask(id)
+	if err != nil {
+		fmt.Println("gettask function error!")
+		errJson(res, http.StatusInternalServerError, "gettask function error") // формулировка
+		return
+	}
+	writeJson(res, http.StatusOK, task)
 }
 
 func writeJson(res http.ResponseWriter, status int, data any) {

@@ -1,29 +1,30 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
+	"fmt"
 	"gofinalproject/pkg/db"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 )
 
-func addTaskHandler(res http.ResponseWriter, req *http.Request) {
-	var task db.Task
-	var buf bytes.Buffer
-	var response any
-	_, err := buf.ReadFrom(req.Body)
+func addTaskHandler(res http.ResponseWriter, req *http.Request, isNew bool) {
+	defer req.Body.Close()
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		errJson(res, http.StatusInternalServerError, "can't read bytes from body")
+		errJson(res, http.StatusBadRequest, "failed to read body")
 		return
 	}
 
-	err = json.Unmarshal(buf.Bytes(), &task)
+	var task db.Task
+	err = json.Unmarshal(body, &task)
 	if err != nil {
-		errJson(res, http.StatusInternalServerError, "can't unmarshal request")
+		errJson(res, http.StatusBadRequest, "failed to unmarshal request")
 		return
 	}
+
 	//check logic - does spaces at title field is valid?
 	if strings.TrimSpace(task.Title) == "" {
 		errJson(res, http.StatusInternalServerError, "task title can't be empty")
@@ -39,8 +40,8 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 		errJson(res, http.StatusInternalServerError, "task date parsing failed")
 		return
 	}
-
-	if parsedDate.Before(time.Now()) {
+	if isSameOrAfter(time.Now(), parsedDate) {
+		//if parsedDate.Before(time.Now()) {
 		if strings.TrimSpace(task.Repeat) == "" {
 			task.Date = time.Now().Format(layout)
 		} else {
@@ -51,13 +52,20 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	id, err := db.AddTask(&task)
-	response = map[string]any{"id": id}
-
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
-		return
+	if isNew {
+		id, err := db.AddTask(&task)
+		if err != nil {
+			errJson(res, http.StatusInternalServerError, "failed to add task")
+			return
+		}
+		res.Header().Set("Location", fmt.Sprintf("/api/tasks/%v", id))
+		writeJson(res, http.StatusCreated, map[string]any{"id": id})
+	} else {
+		err = db.UpdateTask(&task)
+		if err != nil {
+			errJson(res, http.StatusInternalServerError, "failed to update task")
+			return
+		}
+		writeJson(res, http.StatusOK, map[string]any{})
 	}
-
-	writeJson(res, http.StatusCreated, response)
 }

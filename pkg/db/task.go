@@ -29,6 +29,33 @@ func AddTask(task *Task) (int64, error) {
 	return id, err
 }
 
+func GetTask(id string) (*Task, error) {
+	var task Task
+	query := `SELECT * FROM scheduler WHERE id = $1`
+	err := Db.QueryRow(query, id).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+	if err != nil {
+		return nil, fmt.Errorf("gettask queryrow error: %w", err)
+	}
+	return &task, nil
+}
+func UpdateTask(task *Task) error {
+	// параметры пропущены, не забудьте указать WHERE
+	query := `UPDATE scheduler SET date = $2, title = $3, comment = $4, repeat = $5 WHERE id = $1`
+	res, err := Db.Exec(query, task.ID, task.Date, task.Title, task.Comment, task.Repeat)
+	if err != nil {
+		return err
+	}
+	// метод RowsAffected() возвращает количество записей к которым
+	// был применена SQL команда
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf(`incorrect id for updating task`)
+	}
+	return nil
+}
 func Tasks(limit int) ([]*Task, error) {
 	tasks := make([]*Task, 0, limit)
 	query := `SELECT * FROM scheduler ORDER BY date DESC LIMIT $1`
