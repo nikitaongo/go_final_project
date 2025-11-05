@@ -15,16 +15,16 @@ func tasksHandler(res http.ResponseWriter, req *http.Request) {
 	case searchLn != "":
 		tasks, err := db.Searcher(searchLn, db.MaxTasks)
 		if err != nil {
-			errJson(res, http.StatusInternalServerError, "searchline function error") // проверить формулировку
+			errJson(res, http.StatusInternalServerError, "searchline function error")
 			return
 		}
 		writeJson(res, http.StatusOK, TasksResp{
 			Tasks: tasks,
 		})
 	default:
-		tasks, err := db.Tasks(db.MaxTasks) // в параметре максимальное количество записей
+		tasks, err := db.Tasks(db.MaxTasks)
 		if err != nil {
-			errJson(res, http.StatusInternalServerError, "tasks function error") // проверить формулировку
+			errJson(res, http.StatusInternalServerError, "tasks function error")
 			return
 		}
 		writeJson(res, http.StatusOK, TasksResp{

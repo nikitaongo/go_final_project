@@ -176,5 +176,5 @@ func formatDate(searchLn string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%e:\ncan't parse date at search parameter - wrong input", err)
 	}
-	return parsed.Format("20060102"), nil //исп layout
+	return parsed.Format("20060102"), nil
 }

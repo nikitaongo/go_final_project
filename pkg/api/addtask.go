@@ -25,7 +25,6 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, isNew bool) {
 		return
 	}
 
-	//check logic - does spaces at title field is valid?
 	if strings.TrimSpace(task.Title) == "" {
 		errJson(res, http.StatusInternalServerError, "task title can't be empty")
 		return
@@ -41,7 +40,6 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, isNew bool) {
 		return
 	}
 	if isAfter(time.Now(), parsedDate) {
-		//if parsedDate.Before(time.Now()) {
 		if strings.TrimSpace(task.Repeat) == "" {
 			task.Date = time.Now().Format(layout)
 		} else {
