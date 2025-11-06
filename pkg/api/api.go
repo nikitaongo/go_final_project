@@ -112,7 +112,7 @@ func taskDoneHandler(res http.ResponseWriter, req *http.Request) {
 			errJson(res, http.StatusInternalServerError, "can't parse task_Date")
 		}
 
-		task.Date, err = NextDate(taskDate.AddDate(0, 0, 1), task.Date, task.Repeat)
+		task.Date, err = NextDate(taskDate, task.Date, task.Repeat)
 		if err != nil {
 			errJson(res, http.StatusInternalServerError, "nextdate function error")
 			return

@@ -14,6 +14,8 @@ func SetUpServer(dir, port string) {
 
 	if os.Getenv("TODO_PASSWORD") != "" {
 		fmt.Println("Authorization with password required.")
+	} else {
+		fmt.Println("No authorization with password required.")
 	}
 
 	err := http.ListenAndServe(":"+port, nil)
