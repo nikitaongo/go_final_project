@@ -10,18 +10,23 @@ import (
 	"time"
 )
 
-func addTaskHandler(res http.ResponseWriter, req *http.Request, isNew bool) {
+func parseJsonBody(req *http.Request, task any) error {
 	defer req.Body.Close()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		errJson(res, http.StatusBadRequest, "failed to read body")
-		return
+		return fmt.Errorf("failed to read body: %v", err)
 	}
+	if err := json.Unmarshal(body, task); err != nil {
+		return fmt.Errorf("failed to unmarshal request: %v", err)
+	}
+	return nil
+}
 
+func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 	var task db.Task
-	err = json.Unmarshal(body, &task)
-	if err != nil {
-		errJson(res, http.StatusBadRequest, "failed to unmarshal request")
+
+	if err := parseJsonBody(req, &task); err != nil {
+		errJson(res, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -31,39 +36,30 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, isNew bool) {
 	}
 
 	if strings.TrimSpace(task.Date) == "" {
-		task.Date = time.Now().Format(layout)
+		task.Date = time.Now().Format(db.Layout)
 	}
 
-	parsedDate, err := time.Parse(layout, task.Date)
+	parsedDate, err := time.Parse(db.Layout, task.Date)
 	if err != nil {
 		errJson(res, http.StatusInternalServerError, "task date parsing failed")
 		return
 	}
 	if isAfter(time.Now(), parsedDate) {
 		if strings.TrimSpace(task.Repeat) == "" {
-			task.Date = time.Now().Format(layout)
+			task.Date = time.Now().Format(db.Layout)
 		} else {
-			task.Date, err = NextDate(time.Now(), parsedDate.Format(layout), task.Repeat)
+			task.Date, err = NextDate(time.Now(), parsedDate.Format(db.Layout), task.Repeat)
 			if err != nil {
 				errJson(res, http.StatusInternalServerError, "wrong task repeat pattern")
 				return
 			}
 		}
 	}
-	if isNew {
-		id, err := db.AddTask(&task)
-		if err != nil {
-			errJson(res, http.StatusInternalServerError, "failed to add task")
-			return
-		}
-		res.Header().Set("Location", fmt.Sprintf("/api/tasks/%v", id))
-		writeJson(res, http.StatusCreated, map[string]any{"id": id})
-	} else {
-		err = db.UpdateTask(&task)
-		if err != nil {
-			errJson(res, http.StatusInternalServerError, "failed to update task")
-			return
-		}
-		writeJson(res, http.StatusOK, map[string]any{})
+	id, err := db.AddTask(&task)
+	if err != nil {
+		errJson(res, http.StatusInternalServerError, "failed to add task")
+		return
 	}
+	res.Header().Set("Location", fmt.Sprintf("/api/tasks/%v", id))
+	writeJson(res, http.StatusCreated, map[string]any{"id": id})
 }

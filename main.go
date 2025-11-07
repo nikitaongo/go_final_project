@@ -9,18 +9,22 @@ import (
 )
 
 func main() {
-
-	dbFile := os.Getenv("TODO_DBFILE")
-	if dbFile == "" {
-		dbFile = "scheduler.db"
+	cfg := server.Config{
+		Password: os.Getenv("TODO_PASSWORD"),
+		Port:     getenvDefault("TODO_PORT", "7540"),
+		DBFile:   getenvDefault("TODO_DBFILE", "scheduler.db"),
 	}
-	db.Init(dbFile)
+
+	db.Init(cfg.DBFile)
 	defer db.Db.Close()
 
 	webDir := "./web"
-	port := os.Getenv("TODO_PORT")
-	if port == "" {
-		port = "7540"
+	server.StartServer(webDir, cfg)
+}
+
+func getenvDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
-	server.SetUpServer(webDir, port)
+	return def
 }

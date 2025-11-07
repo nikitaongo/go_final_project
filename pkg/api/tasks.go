@@ -13,7 +13,7 @@ func tasksHandler(res http.ResponseWriter, req *http.Request) {
 	searchLn := req.FormValue("search")
 	switch {
 	case searchLn != "":
-		tasks, err := db.Searcher(searchLn, db.MaxTasks)
+		tasks, err := db.Search(searchLn, db.Limit)
 		if err != nil {
 			errJson(res, http.StatusInternalServerError, "searchline function error")
 			return
@@ -22,7 +22,7 @@ func tasksHandler(res http.ResponseWriter, req *http.Request) {
 			Tasks: tasks,
 		})
 	default:
-		tasks, err := db.Tasks(db.MaxTasks)
+		tasks, err := db.Tasks(db.Limit)
 		if err != nil {
 			errJson(res, http.StatusInternalServerError, "tasks function error")
 			return

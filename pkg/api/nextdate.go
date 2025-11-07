@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"gofinalproject/pkg/db"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,7 +10,6 @@ import (
 )
 
 var maxDays int = 400
-var layout = "20060102"
 
 // nextDayHandler handles Get-request with repeat pattern and responses next date.
 func nextDayHandler(res http.ResponseWriter, req *http.Request) {
@@ -18,9 +18,9 @@ func nextDayHandler(res http.ResponseWriter, req *http.Request) {
 
 	now := req.FormValue("now")
 	if now == "" {
-		now = time.Now().Format(layout)
+		now = time.Now().Format(db.Layout)
 	}
-	nowTime, err := time.Parse(layout, now)
+	nowTime, err := time.Parse(db.Layout, now)
 	if err != nil {
 		http.Error(res, fmt.Sprintf("can't parse <now> parameter: %v", err), http.StatusInternalServerError)
 		return
@@ -33,12 +33,12 @@ func nextDayHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	res.WriteHeader(http.StatusOK)
-	res.Write([]byte(next))
+	_, _ = res.Write([]byte(next))
 }
 
 // NextDate calculates next date with different patterns, and dates.
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
-	nextTime, err := time.Parse(layout, dstart)
+	nextTime, err := time.Parse(db.Layout, dstart)
 	if err != nil {
 		return "", fmt.Errorf("can't parse start date parameter - wrong input; %e", err)
 	}
@@ -83,7 +83,7 @@ func dailyCalc(repeatData []string, now, nextTime time.Time) (string, error) {
 			break
 		}
 	}
-	return nextTime.Format(layout), nil
+	return nextTime.Format(db.Layout), nil
 }
 
 // yearlyCalc calculates next date with yearly pattern.
@@ -94,7 +94,7 @@ func yearlyCalc(now, nextTime time.Time) (string, error) {
 			break
 		}
 	}
-	return nextTime.Format(layout), nil
+	return nextTime.Format(db.Layout), nil
 }
 
 // weeklyCalc calculates next date with weekly pattern. It builds a map with valid weekdays and then validate it in cycle.
@@ -124,7 +124,7 @@ func weeklyCalc(repeatData []string, now, nextTime time.Time) (string, error) {
 		}
 		nextTime = nextTime.AddDate(0, 0, 1)
 	}
-	return nextTime.Format(layout), nil
+	return nextTime.Format(db.Layout), nil
 }
 
 // monthlyCalc calculates next date with monthly pattern. It uses a maps parsed monthlyParser
@@ -148,7 +148,7 @@ func monthlyCalc(repeatData []string, now, nextTime time.Time) (string, error) {
 			}
 			nextTime = nextTime.AddDate(0, 0, 1)
 		}
-		return nextTime.Format(layout), nil
+		return nextTime.Format(db.Layout), nil
 	}
 
 	for {
@@ -159,7 +159,7 @@ func monthlyCalc(repeatData []string, now, nextTime time.Time) (string, error) {
 		}
 		nextTime = nextTime.AddDate(0, 0, 1)
 	}
-	return nextTime.Format(layout), nil
+	return nextTime.Format(db.Layout), nil
 
 }
 
@@ -178,11 +178,6 @@ func monthlyParser(repeatData []string, daysThisMonth int) (map[int]bool, map[in
 		}
 		if date < -2 || date == 0 || date > 31 {
 			return nil, nil, fmt.Errorf("date parameter: wrong input (%d)", date)
-		}
-		// if user set task to a 31th day with monthly pattern - he will find it at the last day of the next month, anyway.
-		if date > daysThisMonth {
-			dayNums[daysThisMonth] = true
-			continue
 		}
 		if date < 0 {
 			dayNums[daysThisMonth+date+1] = true

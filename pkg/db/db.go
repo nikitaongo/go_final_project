@@ -7,6 +7,10 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const (
+	Layout = "20060102"
+)
+
 var schema string = `CREATE TABLE scheduler (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date CHAR(8) NOT NULL DEFAULT "",
@@ -17,7 +21,7 @@ var schema string = `CREATE TABLE scheduler (
 CREATE INDEX scheduler_date ON scheduler (date);`
 var Db *sql.DB
 
-var MaxTasks = 50
+var Limit = 50
 
 func Init(dbpath string) error {
 	_, err := os.Stat(dbpath)

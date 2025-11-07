@@ -6,7 +6,7 @@ import (
 	"gofinalproject/pkg/db"
 	"io"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,40 +20,41 @@ var secretKey []byte
 var jwtToken *jwt.Token
 
 // Init runs handlers for api endpoints
-func Init() {
-	http.HandleFunc("/api/signin", authHandler)
+func Init(password string) {
+	http.HandleFunc("/api/signin", authHandler(password))
 	http.HandleFunc("/api/nextdate", nextDayHandler)
-	http.HandleFunc("/api/task", auth(taskHandler))
-	http.HandleFunc("/api/tasks", auth(tasksHandler))
-	http.HandleFunc("/api/task/done", auth(taskDoneHandler))
+	http.HandleFunc("/api/task", auth(taskHandler, password))
+	http.HandleFunc("/api/tasks", auth(tasksHandler, password))
+	http.HandleFunc("/api/task/done", auth(taskDoneHandler, password))
 }
 
-func authHandler(res http.ResponseWriter, req *http.Request) {
-	defer req.Body.Close()
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		errJson(res, http.StatusBadRequest, "failed to read body")
-		return
-	}
-	var usr user
-	err = json.Unmarshal(body, &usr)
-	if err != nil {
-		errJson(res, http.StatusBadRequest, "failed to unmarshal request")
-		return
-	}
-	secretPass := os.Getenv("TODO_PASSWORD")
-	if secretPass == usr.Password || secretPass == "" {
-		jwtToken = jwt.New(jwt.SigningMethodHS256)
-		secretKey = secretGen(secretPass)
-		token, err := jwtToken.SignedString(secretKey)
+func authHandler(password string) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
+		body, err := io.ReadAll(req.Body)
 		if err != nil {
-			errJson(res, http.StatusInternalServerError, "failed to sign token")
+			errJson(res, http.StatusBadRequest, "failed to read body")
 			return
 		}
-		writeJson(res, http.StatusOK, map[string]string{"token": token})
-	} else {
-		errJson(res, http.StatusUnauthorized, "wrong password")
-		return
+		var usr user
+		err = json.Unmarshal(body, &usr)
+		if err != nil {
+			errJson(res, http.StatusBadRequest, "failed to unmarshal request")
+			return
+		}
+		if password == usr.Password || password == "" {
+			jwtToken = jwt.New(jwt.SigningMethodHS256)
+			secretKey = secretGen(password)
+			token, err := jwtToken.SignedString(secretKey)
+			if err != nil {
+				errJson(res, http.StatusInternalServerError, "failed to sign token")
+				return
+			}
+			writeJson(res, http.StatusOK, map[string]string{"token": token})
+		} else {
+			errJson(res, http.StatusUnauthorized, "wrong password")
+			return
+		}
 	}
 }
 
@@ -62,16 +63,15 @@ func secretGen(pass string) []byte {
 	return sumPass[:]
 }
 
-func auth(next http.HandlerFunc) http.HandlerFunc {
+func auth(next http.HandlerFunc, password string) http.HandlerFunc {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
+		if len(password) > 0 {
 			var token string
 			cookie, err := req.Cookie("token")
 			if err == nil {
 				token = cookie.Value
 			}
-			key := secretGen(pass)
+			key := secretGen(password)
 			parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
 				return key, nil
 			})
@@ -87,13 +87,16 @@ func auth(next http.HandlerFunc) http.HandlerFunc {
 func taskHandler(res http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case http.MethodPost:
-		createTaskHandler(res, req)
+		addTaskHandler(res, req)
 	case http.MethodGet:
 		getTaskHandler(res, req)
 	case http.MethodPut:
 		editTaskHandler(res, req)
 	case http.MethodDelete:
 		deleteTaskHandler(res, req)
+	default:
+		res.Header().Set("Allow", "POST, GET, PUT, DELETE")
+		http.Error(res, "HTTP method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 func taskDoneHandler(res http.ResponseWriter, req *http.Request) {
@@ -107,7 +110,7 @@ func taskDoneHandler(res http.ResponseWriter, req *http.Request) {
 		db.DeleteTask(id)
 		writeJson(res, http.StatusOK, struct{}{})
 	} else {
-		taskDate, err := time.Parse(layout, task.Date)
+		taskDate, err := time.Parse(db.Layout, task.Date)
 		if err != nil {
 			errJson(res, http.StatusInternalServerError, "can't parse task_Date")
 		}
@@ -123,16 +126,6 @@ func taskDoneHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-func createTaskHandler(res http.ResponseWriter, req *http.Request) {
-	isNew := true
-	addTaskHandler(res, req, isNew)
-}
-
-func editTaskHandler(res http.ResponseWriter, req *http.Request) {
-	isNew := false
-	addTaskHandler(res, req, isNew)
-}
-
 func getTaskHandler(res http.ResponseWriter, req *http.Request) {
 	id := req.FormValue("id")
 	task, err := db.GetTask(id)
@@ -141,6 +134,48 @@ func getTaskHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJson(res, http.StatusOK, task)
+}
+
+func editTaskHandler(res http.ResponseWriter, req *http.Request) {
+	var task db.Task
+
+	if err := parseJsonBody(req, &task); err != nil {
+		errJson(res, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if strings.TrimSpace(task.Title) == "" {
+		errJson(res, http.StatusInternalServerError, "task title can't be empty")
+		return
+	}
+
+	if strings.TrimSpace(task.Date) == "" {
+		task.Date = time.Now().Format(db.Layout)
+	}
+
+	parsedDate, err := time.Parse(db.Layout, task.Date)
+	if err != nil {
+		errJson(res, http.StatusInternalServerError, "task date parsing failed")
+		return
+	}
+	if isAfter(time.Now(), parsedDate) {
+		if strings.TrimSpace(task.Repeat) == "" {
+			task.Date = time.Now().Format(db.Layout)
+		} else {
+			task.Date, err = NextDate(time.Now(), parsedDate.Format(db.Layout), task.Repeat)
+			if err != nil {
+				errJson(res, http.StatusInternalServerError, "wrong task repeat pattern")
+				return
+			}
+		}
+	}
+	err = db.UpdateTask(&task)
+	if err != nil {
+		errJson(res, http.StatusInternalServerError, "failed to update task")
+		return
+	}
+	writeJson(res, http.StatusOK, map[string]any{})
+
 }
 
 func deleteTaskHandler(res http.ResponseWriter, req *http.Request) {
