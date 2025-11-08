@@ -31,7 +31,7 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if strings.TrimSpace(task.Title) == "" {
-		errJson(res, http.StatusInternalServerError, "task title can't be empty")
+		errJson(res, http.StatusBadRequest, "task title can't be empty")
 		return
 	}
 

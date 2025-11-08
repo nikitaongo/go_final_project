@@ -13,6 +13,11 @@ var maxDays int = 400
 
 // nextDayHandler handles Get-request with repeat pattern and responses next date.
 func nextDayHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet {
+		res.Header().Set("Allow", http.MethodGet)
+		http.Error(res, "HTTP method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	date := req.FormValue("date")
 	repeat := req.FormValue("repeat")
 
